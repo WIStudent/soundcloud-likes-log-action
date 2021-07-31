@@ -20292,7 +20292,6 @@ __nccwpck_require__.r(__webpack_exports__);
 
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(2186);
-var core_default = /*#__PURE__*/__nccwpck_require__.n(core);
 // EXTERNAL MODULE: ./node_modules/rxjs/dist/cjs/index.js
 var cjs = __nccwpck_require__(1752);
 // EXTERNAL MODULE: ./node_modules/rxjs/dist/cjs/operators/index.js
@@ -20674,8 +20673,8 @@ var main = function () { return src_awaiter(void 0, void 0, void 0, function () 
     return src_generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                username = core_default().getInput('username');
-                outputPath = core_default().getInput('output-path');
+                username = (0,core.getInput)('username');
+                outputPath = (0,core.getInput)('output-path');
                 return [4 /*yield*/, createLikesLog(username, outputPath)];
             case 1:
                 _a.sent();
