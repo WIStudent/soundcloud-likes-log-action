@@ -20682,7 +20682,9 @@ var main = function () { return src_awaiter(void 0, void 0, void 0, function () 
         }
     });
 }); };
-main();
+main().catch(function () {
+    process.exit(1);
+});
 
 
 /***/ }),

@@ -7,4 +7,6 @@ const main = async () => {
   await createLikesLog(username, outputPath);
 };
 
-main();
+main().catch(() => {
+  process.exit(1);
+});
