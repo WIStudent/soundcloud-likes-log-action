@@ -1,0 +1,38 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "likes.schema.json",
+  "type": "object",
+  "definitions": {
+  
+    "Like": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "like"
+        },
+        "track": {
+          "$ref": "track.schema.json"
+        },
+        "playlist": {
+          "$ref": "playlist.schema.json"
+        }
+      },
+      "required": ["created_at", "kind"]
+    }
+  },
+  "properties": {
+    "next_href": {
+      "type": ["string", "null"]
+    },
+    "collection": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Like"
+      }
+    }
+  },
+  "required": ["next_href", "collection"]
+}

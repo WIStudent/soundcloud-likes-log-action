@@ -1,0 +1,13 @@
+name: "Soundcloud Likes Log"
+description: "Create a log of your soundcloud likes"
+inputs:
+  username:
+    description: 'Your username'
+    required: true
+  output-path:
+    description: 'Where to write the output json'
+    required: false
+    default: 'likes.json'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
