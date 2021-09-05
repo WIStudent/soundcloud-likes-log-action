@@ -74,7 +74,7 @@ const addClientId = (url: string, clientId: string): string => {
 }
 
 
-const loadJson = async (url: URL): Promise<unknown> => {
+const loadJson = async (url: string): Promise<unknown> => {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText} ${url}`);
@@ -83,7 +83,7 @@ const loadJson = async (url: URL): Promise<unknown> => {
 };
 
 const loadLikes = async (url: string): Promise<LikesSchema> => {
-  const json = await loadJson(new URL(url));
+  const json = await loadJson(url);
   validateLikes(json);
   return json;
 }
@@ -91,7 +91,7 @@ const loadLikes = async (url: string): Promise<LikesSchema> => {
 const loadPlaylist = async (clientId: string, playlistId: number): Promise<PlaylistSchema> => {
   const url = new URL(`https://api-v2.soundcloud.com/playlists/${playlistId}`);
   url.searchParams.append('client_id', clientId);
-  const json = await loadJson(url);
+  const json = await loadJson(url.href);
   validatePlaylist(json);
   return json;
 }
@@ -103,7 +103,7 @@ const loadTracks = async (clientId: string, trackIds: number[]): Promise<TracksS
   const url = new URL('https://api-v2.soundcloud.com/tracks');
   url.searchParams.append('ids', trackIds.join(','));
   url.searchParams.append('client_id', clientId);
-  const json = await loadJson(url);
+  const json = await loadJson(url.href);
   validateTracks(json);
   return json;
 }
