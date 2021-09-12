@@ -3,6 +3,7 @@ import userSchema from './schemas/user.schema.json';
 import trackSchema from './schemas/track.schema.json';
 import tracksSchema from './schemas/tracks.schema.json';
 import { TracksSchema } from './schemas/types/tracks.schema';
+import basePlaylistSchema from './schemas/basePlaylist.schema.json';
 import playlistSchema from './schemas/playlist.schema.json';
 import { PlaylistSchema } from './schemas/types/playlist.schema';
 import likesSchema from './schemas/likes.schema.json';
@@ -19,7 +20,7 @@ class ValidationError extends Error {
 
 const getAjv = (): Ajv => {
   ajv = ajv ?? new Ajv({
-    schemas: [userSchema, trackSchema, tracksSchema, playlistSchema, likesSchema]
+    schemas: [userSchema, trackSchema, tracksSchema, basePlaylistSchema, playlistSchema, likesSchema]
   });
   return ajv;
 };

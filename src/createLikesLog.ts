@@ -105,7 +105,15 @@ const loadTracks = async (clientId: string, trackIds: number[]): Promise<TracksS
   url.searchParams.append('client_id', clientId);
   const json = await loadJson(url.href);
   validateTracks(json);
-  return json;
+  const trackMap = new Map(json.map(t => [t.id, t]));
+  const tracks = trackIds.map(id => {
+    const track = trackMap.get(id);
+    if (track === undefined) {
+      throw new Error(`could not load track for trackId ${id}`);
+    }
+    return track;
+  });
+  return tracks;
 }
 
 interface PlaylistWithTracksNarrowed extends NarrowedPlaylist {
@@ -116,7 +124,6 @@ const addTracksToPlaylist = async (clientId: string, playlist: NarrowedPlaylist|
     return undefined;
   }
   const loadedPlaylist = await loadPlaylist(clientId, playlist.id);
-  // @ts-ignore
   const trackIds = loadedPlaylist.tracks.map(({id}) => id);
   const loadedTracks = await loadTracks(clientId, trackIds);
   return {

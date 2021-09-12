@@ -4,7 +4,7 @@
   "description": "Github action to log list of soundcloud likes",
   "main": "dist/index.js",
   "scripts": {
-    "build": "npm run json2ts && ncc build src/index.ts",
+    "build": "npm run json2ts && ncc build --target es2019 src/index.ts",
     "json2ts": "json2ts -i 'src/schemas/*.schema.json' --output src/schemas/types --cwd src/schemas"
   },
   "author": "Tobias Trumm <info@tobiastrumm.de> (https://tobiastrumm.de)",

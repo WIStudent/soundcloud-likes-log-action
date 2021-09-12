@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "basePlaylist.schema.json",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "number"
+    },
+    "kind": {
+      "const": "playlist"
+    },
+    "permalink_url": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "track_count": {
+      "type": "number"
+    },
+    "user": {
+      "$ref": "user.schema.json"
+    }
+  },
+  "required": ["id", "kind", "permalink_url", "title", "track_count", "user"]
+}

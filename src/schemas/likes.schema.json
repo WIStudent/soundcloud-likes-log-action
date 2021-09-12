@@ -17,7 +17,7 @@
           "$ref": "track.schema.json"
         },
         "playlist": {
-          "$ref": "playlist.schema.json"
+          "$ref": "basePlaylist.schema.json"
         }
       },
       "required": ["created_at", "kind"]
