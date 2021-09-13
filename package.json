@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@actions/core": "^1.5.0",
-    "ajv": "^8.6.2",
+    "ajv": "^8.6.3",
     "node-fetch": "^3.0.0",
     "rxjs": "^7.3.0",
     "rxjs-etc": "^10.6.1",
