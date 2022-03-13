@@ -2,7 +2,6 @@ import {of, EMPTY, from, firstValueFrom} from 'rxjs';
 import {expand, concatMap, map, toArray} from 'rxjs/operators'
 import fetch from 'node-fetch';
 import {LikesSchema} from './schemas/types/likes.schema';
-import {concatMapEager} from 'rxjs-etc/operators'
 import {fetchKey} from 'soundcloud-key-fetch';
 import {promises as fsp} from 'fs';
 import { validateLikes, validatePlaylist, validateTracks } from './validate';
@@ -142,10 +141,10 @@ const getLikes = (clientId: string, userId: string) => {
     expand(({next_href}) => next_href === null ? EMPTY : loadLikes(addClientId(next_href, clientId))),
     concatMap(({collection}) => from(collection)),
     map(narrowLike),
-    concatMapEager(async (like) => ({
+    concatMap(async (like) => ({
       ...like,
       playlist: await addTracksToPlaylist(clientId, like.playlist)
-    }), 5)
+    }))
   );
 };
 
