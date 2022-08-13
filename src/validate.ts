@@ -2,12 +2,12 @@ import Ajv, { ErrorObject } from 'ajv';
 import userSchema from './schemas/user.schema.json';
 import trackSchema from './schemas/track.schema.json';
 import tracksSchema from './schemas/tracks.schema.json';
-import { TracksSchema } from './schemas/types/tracks.schema';
+import { TracksSchemaJson } from './schemas/types/tracks.schema';
 import basePlaylistSchema from './schemas/basePlaylist.schema.json';
 import playlistSchema from './schemas/playlist.schema.json';
-import { PlaylistSchema } from './schemas/types/playlist.schema';
+import { PlaylistSchemaJson } from './schemas/types/playlist.schema';
 import likesSchema from './schemas/likes.schema.json';
-import { LikesSchema } from './schemas/types/likes.schema';
+import { LikesSchemaJson } from './schemas/types/likes.schema';
 
 let ajv: Ajv|undefined = undefined;
 
@@ -39,14 +39,14 @@ function validate<T>(data: unknown, schemaId: string): asserts data is T {
   }
 }
 
-export function validateTracks(data: unknown): asserts data is TracksSchema {
+export function validateTracks(data: unknown): asserts data is TracksSchemaJson {
   validate(data, tracksSchema.$id);
 }
 
-export function validatePlaylist(data: unknown): asserts data is PlaylistSchema {
+export function validatePlaylist(data: unknown): asserts data is PlaylistSchemaJson {
   validate(data, playlistSchema.$id);
 }
 
-export function validateLikes(data: unknown): asserts data is LikesSchema {
+export function validateLikes(data: unknown): asserts data is LikesSchemaJson {
   validate(data, likesSchema.$id);
 }

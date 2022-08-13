@@ -1,12 +1,12 @@
 import {of, EMPTY, from, firstValueFrom} from 'rxjs';
 import {expand, concatMap, map, toArray} from 'rxjs/operators'
 import fetch from 'node-fetch';
-import {LikesSchema} from './schemas/types/likes.schema';
+import {LikesSchemaJson} from './schemas/types/likes.schema';
 import {fetchKey} from 'soundcloud-key-fetch';
 import {promises as fsp} from 'fs';
 import { validateLikes, validatePlaylist, validateTracks } from './validate';
-import { PlaylistSchema } from './schemas/types/playlist.schema';
-import { TracksSchema } from './schemas/types/tracks.schema';
+import { PlaylistSchemaJson } from './schemas/types/playlist.schema';
+import { TracksSchemaJson } from './schemas/types/tracks.schema';
 
 interface NarrowedUser {
   id: number;
@@ -81,13 +81,13 @@ const loadJson = async (url: string): Promise<unknown> => {
   return await response.json();
 };
 
-const loadLikes = async (url: string): Promise<LikesSchema> => {
+const loadLikes = async (url: string): Promise<LikesSchemaJson> => {
   const json = await loadJson(url);
   validateLikes(json);
   return json;
 }
 
-const loadPlaylist = async (clientId: string, playlistId: number): Promise<PlaylistSchema> => {
+const loadPlaylist = async (clientId: string, playlistId: number): Promise<PlaylistSchemaJson> => {
   const url = new URL(`https://api-v2.soundcloud.com/playlists/${playlistId}`);
   url.searchParams.append('client_id', clientId);
   const json = await loadJson(url.href);
@@ -95,7 +95,7 @@ const loadPlaylist = async (clientId: string, playlistId: number): Promise<Playl
   return json;
 }
 
-const loadTracks = async (clientId: string, trackIds: number[]): Promise<TracksSchema> => {
+const loadTracks = async (clientId: string, trackIds: number[]): Promise<TracksSchemaJson> => {
   if (trackIds.length === 0) {
     return [];
   }
