@@ -19,6 +19,6 @@
     "ajv": "^8.11.0",
     "node-fetch": "^3.2.10",
     "rxjs": "^7.5.6",
-    "soundcloud-key-fetch": "^1.0.11"
+    "soundcloud-key-fetch": "^1.0.13"
   }
 }
