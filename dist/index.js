@@ -16866,71 +16866,6 @@ Object.defineProperty(exports, "zipWith", ({ enumerable: true, get: function () 
 
 /***/ }),
 
-/***/ 5011:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-exports.fetchKey = async function() {
-    return new Promise(async function(resolve, rej) {
-        (__nccwpck_require__(5687).get)('https://soundcloud.com/', (res) => {
-            let r = ''
-            res.on('data', async (d) => {
-                r += d
-            })
-
-            res.on('end', async () => {
-                const res = r.split('<script crossorigin src="');
-                const urls = [];
-                res.forEach(urlA => {
-                    const urlreg = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/
-                    let url = urlA.replace('"></script>', ''); let res = url.split('\n')[0]; 
-                    if(urlreg.test(res)) urls.push(res);
-                });
-                async function fetchKey() {
-                    return new Promise(async function(resolve, rej) {
-                        let key;
-                        (__nccwpck_require__(5687).get)(urls[urls.length - 1], async a => {
-                            let data = ''
-                            a.on('data', async d => {
-                                data += d
-                            })
-
-                            a.on('end', () => {
-                                if(data.includes(',client_id:"')) {
-                                    const thingA = data.split(',client_id:"');
-                                    key = thingA[1].split('"')[0];
-                                    return resolve(key)
-                                }
-                                return resolve('')
-                            })
-
-                            a.on('error', () => rej(err))
-                        });
-                    })
-                }
-                const key = await fetchKey()
-                if(key) {resolve(key)} else {rej(new Error(`Unable to fetch a SoundCloud API key! This most likely has happened due to either making too many requests, or the SoundCloud website has changed!`))}
-            })
-        }).on('error', async e => {
-            rej(e)
-        })
-    })
-};
-
-exports.testKey = function(key) {
-    return new Promise(function(res, rej) {
-        if(!key) {return rej(new Error(`No SoundCloud API key provided`))} else {
-            (__nccwpck_require__(5687).get)(`https://api-v2.soundcloud.com/search?client_id=${key}&q=this%20package%20gave%20me%20neck%20pains&limit=0`, async (result) => {
-                if(result.statusCode === 401 || result.statusCode === 403) return res(false);
-                if(result.statusCode === 404 || result.statusCode === 200) return res(true)
-            }).on('error', e => {
-                return rej(e)
-            })
-        }
-    })
-}
-
-/***/ }),
-
 /***/ 4294:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -23489,9 +23424,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const rxjs_1 = __nccwpck_require__(1752);
 const operators_1 = __nccwpck_require__(749);
 const node_fetch_1 = __importDefault(__nccwpck_require__(4429));
-const soundcloud_key_fetch_1 = __nccwpck_require__(5011);
 const fs_1 = __nccwpck_require__(7147);
 const validate_1 = __nccwpck_require__(4953);
+const getClientId_1 = __importDefault(__nccwpck_require__(2864));
 const narrowUser = ({ id, kind, permalink_url, username }) => ({
     id,
     kind,
@@ -23594,10 +23529,39 @@ const getUserId = async (username) => {
     return match[0].slice(19);
 };
 exports["default"] = async (username, outputPath) => {
-    const clientId = await (0, soundcloud_key_fetch_1.fetchKey)();
+    const clientId = await (0, getClientId_1.default)();
     const userId = await getUserId(username);
     const likes = await (0, rxjs_1.firstValueFrom)(getLikes(clientId, userId).pipe((0, operators_1.toArray)()));
     await fs_1.promises.writeFile(outputPath, JSON.stringify(likes, null, 2));
+};
+
+
+/***/ }),
+
+/***/ 2864:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const node_fetch_1 = __importDefault(__nccwpck_require__(4429));
+const SCRIPT_REGEX = /<script crossorigin src="(.+?)">/g;
+const CLIENT_ID_REGEX = /client_id:"(.+?)"/g;
+const getClientIdFromScriptSrc = async (scriptSrc) => {
+    const script = await (0, node_fetch_1.default)(scriptSrc).then(r => r.text());
+    const clientIdMatch = script.matchAll(CLIENT_ID_REGEX).next();
+    if (clientIdMatch.done) {
+        throw new Error('clientId not found');
+    }
+    return clientIdMatch.value[1];
+};
+exports["default"] = async () => {
+    const site = await (0, node_fetch_1.default)("https://soundcloud.com/").then(r => r.text());
+    const scriptSrcs = Array.from(site.matchAll(SCRIPT_REGEX)).map(matches => matches[1]);
+    return Promise.any(scriptSrcs.map(src => getClientIdFromScriptSrc(src)));
 };
 
 

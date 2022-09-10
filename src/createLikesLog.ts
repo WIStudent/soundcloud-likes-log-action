@@ -2,11 +2,11 @@ import {of, EMPTY, from, firstValueFrom} from 'rxjs';
 import {expand, concatMap, map, toArray} from 'rxjs/operators'
 import fetch from 'node-fetch';
 import {LikesSchemaJson} from './schemas/types/likes.schema';
-import {fetchKey} from 'soundcloud-key-fetch';
 import {promises as fsp} from 'fs';
 import { validateLikes, validatePlaylist, validateTracks } from './validate';
 import { PlaylistSchemaJson } from './schemas/types/playlist.schema';
 import { TracksSchemaJson } from './schemas/types/tracks.schema';
+import getClientId from './getClientId';
 
 interface NarrowedUser {
   id: number;
@@ -160,7 +160,7 @@ const getUserId = async (username: string): Promise<string> => {
 
 
 export default async (username: string, outputPath: string) => {
-  const clientId = await fetchKey();
+  const clientId = await getClientId();
   const userId = await getUserId(username);
 
   const likes = await firstValueFrom(getLikes(clientId, userId).pipe(toArray()));
