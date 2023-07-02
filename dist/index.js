@@ -140,7 +140,6 @@ const file_command_1 = __nccwpck_require__(717);
 const utils_1 = __nccwpck_require__(5278);
 const os = __importStar(__nccwpck_require__(2037));
 const path = __importStar(__nccwpck_require__(1017));
-const uuid_1 = __nccwpck_require__(5840);
 const oidc_utils_1 = __nccwpck_require__(8041);
 /**
  * The code to exit an action
@@ -170,20 +169,9 @@ function exportVariable(name, val) {
     process.env[name] = convertedVal;
     const filePath = process.env['GITHUB_ENV'] || '';
     if (filePath) {
-        const delimiter = `ghadelimiter_${uuid_1.v4()}`;
-        // These should realistically never happen, but just in case someone finds a way to exploit uuid generation let's not allow keys or values that contain the delimiter.
-        if (name.includes(delimiter)) {
-            throw new Error(`Unexpected input: name should not contain the delimiter "${delimiter}"`);
-        }
-        if (convertedVal.includes(delimiter)) {
-            throw new Error(`Unexpected input: value should not contain the delimiter "${delimiter}"`);
-        }
-        const commandValue = `${name}<<${delimiter}${os.EOL}${convertedVal}${os.EOL}${delimiter}`;
-        file_command_1.issueCommand('ENV', commandValue);
+        return file_command_1.issueFileCommand('ENV', file_command_1.prepareKeyValueMessage(name, val));
     }
-    else {
-        command_1.issueCommand('set-env', { name }, convertedVal);
-    }
+    command_1.issueCommand('set-env', { name }, convertedVal);
 }
 exports.exportVariable = exportVariable;
 /**
@@ -201,7 +189,7 @@ exports.setSecret = setSecret;
 function addPath(inputPath) {
     const filePath = process.env['GITHUB_PATH'] || '';
     if (filePath) {
-        file_command_1.issueCommand('PATH', inputPath);
+        file_command_1.issueFileCommand('PATH', inputPath);
     }
     else {
         command_1.issueCommand('add-path', {}, inputPath);
@@ -241,7 +229,10 @@ function getMultilineInput(name, options) {
     const inputs = getInput(name, options)
         .split('\n')
         .filter(x => x !== '');
-    return inputs;
+    if (options && options.trimWhitespace === false) {
+        return inputs;
+    }
+    return inputs.map(input => input.trim());
 }
 exports.getMultilineInput = getMultilineInput;
 /**
@@ -274,8 +265,12 @@ exports.getBooleanInput = getBooleanInput;
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setOutput(name, value) {
+    const filePath = process.env['GITHUB_OUTPUT'] || '';
+    if (filePath) {
+        return file_command_1.issueFileCommand('OUTPUT', file_command_1.prepareKeyValueMessage(name, value));
+    }
     process.stdout.write(os.EOL);
-    command_1.issueCommand('set-output', { name }, value);
+    command_1.issueCommand('set-output', { name }, utils_1.toCommandValue(value));
 }
 exports.setOutput = setOutput;
 /**
@@ -404,7 +399,11 @@ exports.group = group;
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function saveState(name, value) {
-    command_1.issueCommand('save-state', { name }, value);
+    const filePath = process.env['GITHUB_STATE'] || '';
+    if (filePath) {
+        return file_command_1.issueFileCommand('STATE', file_command_1.prepareKeyValueMessage(name, value));
+    }
+    command_1.issueCommand('save-state', { name }, utils_1.toCommandValue(value));
 }
 exports.saveState = saveState;
 /**
@@ -470,13 +469,14 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.issueCommand = void 0;
+exports.prepareKeyValueMessage = exports.issueFileCommand = void 0;
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const fs = __importStar(__nccwpck_require__(7147));
 const os = __importStar(__nccwpck_require__(2037));
+const uuid_1 = __nccwpck_require__(5840);
 const utils_1 = __nccwpck_require__(5278);
-function issueCommand(command, message) {
+function issueFileCommand(command, message) {
     const filePath = process.env[`GITHUB_${command}`];
     if (!filePath) {
         throw new Error(`Unable to find environment variable for file command ${command}`);
@@ -488,7 +488,22 @@ function issueCommand(command, message) {
         encoding: 'utf8'
     });
 }
-exports.issueCommand = issueCommand;
+exports.issueFileCommand = issueFileCommand;
+function prepareKeyValueMessage(key, value) {
+    const delimiter = `ghadelimiter_${uuid_1.v4()}`;
+    const convertedValue = utils_1.toCommandValue(value);
+    // These should realistically never happen, but just in case someone finds a
+    // way to exploit uuid generation let's not allow keys or values that contain
+    // the delimiter.
+    if (key.includes(delimiter)) {
+        throw new Error(`Unexpected input: name should not contain the delimiter "${delimiter}"`);
+    }
+    if (convertedValue.includes(delimiter)) {
+        throw new Error(`Unexpected input: value should not contain the delimiter "${delimiter}"`);
+    }
+    return `${key}<<${delimiter}${os.EOL}${convertedValue}${os.EOL}${delimiter}`;
+}
+exports.prepareKeyValueMessage = prepareKeyValueMessage;
 //# sourceMappingURL=file-command.js.map
 
 /***/ }),
@@ -1753,7 +1768,7 @@ exports.checkBypass = checkBypass;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
+exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
 const core_1 = __nccwpck_require__(2685);
 const draft7_1 = __nccwpck_require__(691);
 const discriminator_1 = __nccwpck_require__(4025);
@@ -1794,6 +1809,10 @@ Object.defineProperty(exports, "stringify", ({ enumerable: true, get: function (
 Object.defineProperty(exports, "nil", ({ enumerable: true, get: function () { return codegen_1.nil; } }));
 Object.defineProperty(exports, "Name", ({ enumerable: true, get: function () { return codegen_1.Name; } }));
 Object.defineProperty(exports, "CodeGen", ({ enumerable: true, get: function () { return codegen_1.CodeGen; } }));
+var validation_error_1 = __nccwpck_require__(7616);
+Object.defineProperty(exports, "ValidationError", ({ enumerable: true, get: function () { return validation_error_1.default; } }));
+var ref_error_1 = __nccwpck_require__(8190);
+Object.defineProperty(exports, "MissingRefError", ({ enumerable: true, get: function () { return ref_error_1.default; } }));
 //# sourceMappingURL=ajv.js.map
 
 /***/ }),
@@ -4211,7 +4230,7 @@ function checkContextTypes(it, types) {
             strictTypesError(it, `type "${t}" not allowed by context "${it.dataTypes.join(",")}"`);
         }
     });
-    it.dataTypes = it.dataTypes.filter((t) => includesType(types, t));
+    narrowSchemaTypes(it, types);
 }
 function checkMultipleTypes(it, ts) {
     if (ts.length > 1 && !(ts.length === 2 && ts.includes("null"))) {
@@ -4235,6 +4254,16 @@ function hasApplicableType(schTs, kwdT) {
 }
 function includesType(ts, t) {
     return ts.includes(t) || (t === "integer" && ts.includes("number"));
+}
+function narrowSchemaTypes(it, withTypes) {
+    const ts = [];
+    for (const t of it.dataTypes) {
+        if (includesType(withTypes, t))
+            ts.push(t);
+        else if (withTypes.includes("integer") && t === "number")
+            ts.push("integer");
+    }
+    it.dataTypes = ts;
 }
 function strictTypesError(it, msg) {
     const schemaPath = it.schemaEnv.baseId + it.errSchemaPath;
@@ -7621,8 +7650,8 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.interval = exports.iif = exports.generate = exports.fromEventPattern = exports.fromEvent = exports.from = exports.forkJoin = exports.empty = exports.defer = exports.connectable = exports.concat = exports.combineLatest = exports.bindNodeCallback = exports.bindCallback = exports.UnsubscriptionError = exports.TimeoutError = exports.SequenceError = exports.ObjectUnsubscribedError = exports.NotFoundError = exports.EmptyError = exports.ArgumentOutOfRangeError = exports.firstValueFrom = exports.lastValueFrom = exports.isObservable = exports.identity = exports.noop = exports.pipe = exports.NotificationKind = exports.Notification = exports.Subscriber = exports.Subscription = exports.Scheduler = exports.VirtualAction = exports.VirtualTimeScheduler = exports.animationFrameScheduler = exports.animationFrame = exports.queueScheduler = exports.queue = exports.asyncScheduler = exports.async = exports.asapScheduler = exports.asap = exports.AsyncSubject = exports.ReplaySubject = exports.BehaviorSubject = exports.Subject = exports.animationFrames = exports.observable = exports.ConnectableObservable = exports.Observable = void 0;
 exports.filter = exports.expand = exports.exhaustMap = exports.exhaustAll = exports.exhaust = exports.every = exports.endWith = exports.elementAt = exports.distinctUntilKeyChanged = exports.distinctUntilChanged = exports.distinct = exports.dematerialize = exports.delayWhen = exports.delay = exports.defaultIfEmpty = exports.debounceTime = exports.debounce = exports.count = exports.connect = exports.concatWith = exports.concatMapTo = exports.concatMap = exports.concatAll = exports.combineLatestWith = exports.combineLatestAll = exports.combineAll = exports.catchError = exports.bufferWhen = exports.bufferToggle = exports.bufferTime = exports.bufferCount = exports.buffer = exports.auditTime = exports.audit = exports.config = exports.NEVER = exports.EMPTY = exports.scheduled = exports.zip = exports.using = exports.timer = exports.throwError = exports.range = exports.race = exports.partition = exports.pairs = exports.onErrorResumeNext = exports.of = exports.never = exports.merge = void 0;
-exports.switchMapTo = exports.switchMap = exports.switchAll = exports.subscribeOn = exports.startWith = exports.skipWhile = exports.skipUntil = exports.skipLast = exports.skip = exports.single = exports.shareReplay = exports.share = exports.sequenceEqual = exports.scan = exports.sampleTime = exports.sample = exports.refCount = exports.retryWhen = exports.retry = exports.repeatWhen = exports.repeat = exports.reduce = exports.raceWith = exports.publishReplay = exports.publishLast = exports.publishBehavior = exports.publish = exports.pluck = exports.pairwise = exports.observeOn = exports.multicast = exports.min = exports.mergeWith = exports.mergeScan = exports.mergeMapTo = exports.mergeMap = exports.flatMap = exports.mergeAll = exports.max = exports.materialize = exports.mapTo = exports.map = exports.last = exports.isEmpty = exports.ignoreElements = exports.groupBy = exports.first = exports.findIndex = exports.find = exports.finalize = void 0;
-exports.zipWith = exports.zipAll = exports.withLatestFrom = exports.windowWhen = exports.windowToggle = exports.windowTime = exports.windowCount = exports.window = exports.toArray = exports.timestamp = exports.timeoutWith = exports.timeout = exports.timeInterval = exports.throwIfEmpty = exports.throttleTime = exports.throttle = exports.tap = exports.takeWhile = exports.takeUntil = exports.takeLast = exports.take = exports.switchScan = void 0;
+exports.switchMap = exports.switchAll = exports.subscribeOn = exports.startWith = exports.skipWhile = exports.skipUntil = exports.skipLast = exports.skip = exports.single = exports.shareReplay = exports.share = exports.sequenceEqual = exports.scan = exports.sampleTime = exports.sample = exports.refCount = exports.retryWhen = exports.retry = exports.repeatWhen = exports.repeat = exports.reduce = exports.raceWith = exports.publishReplay = exports.publishLast = exports.publishBehavior = exports.publish = exports.pluck = exports.pairwise = exports.onErrorResumeNextWith = exports.observeOn = exports.multicast = exports.min = exports.mergeWith = exports.mergeScan = exports.mergeMapTo = exports.mergeMap = exports.flatMap = exports.mergeAll = exports.max = exports.materialize = exports.mapTo = exports.map = exports.last = exports.isEmpty = exports.ignoreElements = exports.groupBy = exports.first = exports.findIndex = exports.find = exports.finalize = void 0;
+exports.zipWith = exports.zipAll = exports.withLatestFrom = exports.windowWhen = exports.windowToggle = exports.windowTime = exports.windowCount = exports.window = exports.toArray = exports.timestamp = exports.timeoutWith = exports.timeout = exports.timeInterval = exports.throwIfEmpty = exports.throttleTime = exports.throttle = exports.tap = exports.takeWhile = exports.takeUntil = exports.takeLast = exports.take = exports.switchScan = exports.switchMapTo = void 0;
 var Observable_1 = __nccwpck_require__(3014);
 Object.defineProperty(exports, "Observable", ({ enumerable: true, get: function () { return Observable_1.Observable; } }));
 var ConnectableObservable_1 = __nccwpck_require__(420);
@@ -7860,6 +7889,8 @@ var multicast_1 = __nccwpck_require__(5457);
 Object.defineProperty(exports, "multicast", ({ enumerable: true, get: function () { return multicast_1.multicast; } }));
 var observeOn_1 = __nccwpck_require__(2451);
 Object.defineProperty(exports, "observeOn", ({ enumerable: true, get: function () { return observeOn_1.observeOn; } }));
+var onErrorResumeNextWith_1 = __nccwpck_require__(3569);
+Object.defineProperty(exports, "onErrorResumeNextWith", ({ enumerable: true, get: function () { return onErrorResumeNextWith_1.onErrorResumeNextWith; } }));
 var pairwise_1 = __nccwpck_require__(2206);
 Object.defineProperty(exports, "pairwise", ({ enumerable: true, get: function () { return pairwise_1.pairwise; } }));
 var pluck_1 = __nccwpck_require__(6073);
@@ -9499,7 +9530,6 @@ exports.defer = defer;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.animationFrames = void 0;
 var Observable_1 = __nccwpck_require__(3014);
-var Subscription_1 = __nccwpck_require__(9548);
 var performanceTimestampProvider_1 = __nccwpck_require__(143);
 var animationFrameProvider_1 = __nccwpck_require__(2738);
 function animationFrames(timestampProvider) {
@@ -9507,23 +9537,29 @@ function animationFrames(timestampProvider) {
 }
 exports.animationFrames = animationFrames;
 function animationFramesFactory(timestampProvider) {
-    var schedule = animationFrameProvider_1.animationFrameProvider.schedule;
     return new Observable_1.Observable(function (subscriber) {
-        var subscription = new Subscription_1.Subscription();
         var provider = timestampProvider || performanceTimestampProvider_1.performanceTimestampProvider;
         var start = provider.now();
-        var run = function (timestamp) {
-            var now = provider.now();
-            subscriber.next({
-                timestamp: timestampProvider ? now : timestamp,
-                elapsed: now - start,
-            });
+        var id = 0;
+        var run = function () {
             if (!subscriber.closed) {
-                subscription.add(schedule(run));
+                id = animationFrameProvider_1.animationFrameProvider.requestAnimationFrame(function (timestamp) {
+                    id = 0;
+                    var now = provider.now();
+                    subscriber.next({
+                        timestamp: timestampProvider ? now : timestamp,
+                        elapsed: now - start,
+                    });
+                    run();
+                });
             }
         };
-        subscription.add(schedule(run));
-        return subscription;
+        run();
+        return function () {
+            if (id) {
+                animationFrameProvider_1.animationFrameProvider.cancelAnimationFrame(id);
+            }
+        };
     });
 }
 var DEFAULT_ANIMATION_FRAMES = animationFramesFactory();
@@ -10176,15 +10212,39 @@ exports.of = of;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.onErrorResumeNext = void 0;
-var empty_1 = __nccwpck_require__(437);
-var onErrorResumeNext_1 = __nccwpck_require__(8991);
+var Observable_1 = __nccwpck_require__(3014);
 var argsOrArgArray_1 = __nccwpck_require__(8824);
+var OperatorSubscriber_1 = __nccwpck_require__(9549);
+var noop_1 = __nccwpck_require__(1642);
+var innerFrom_1 = __nccwpck_require__(7105);
 function onErrorResumeNext() {
     var sources = [];
     for (var _i = 0; _i < arguments.length; _i++) {
         sources[_i] = arguments[_i];
     }
-    return onErrorResumeNext_1.onErrorResumeNext(argsOrArgArray_1.argsOrArgArray(sources))(empty_1.EMPTY);
+    var nextSources = argsOrArgArray_1.argsOrArgArray(sources);
+    return new Observable_1.Observable(function (subscriber) {
+        var sourceIndex = 0;
+        var subscribeNext = function () {
+            if (sourceIndex < nextSources.length) {
+                var nextSource = void 0;
+                try {
+                    nextSource = innerFrom_1.innerFrom(nextSources[sourceIndex++]);
+                }
+                catch (err) {
+                    subscribeNext();
+                    return;
+                }
+                var innerSubscriber = new OperatorSubscriber_1.OperatorSubscriber(subscriber, undefined, noop_1.noop, noop_1.noop);
+                nextSource.subscribe(innerSubscriber);
+                innerSubscriber.add(subscribeNext);
+            }
+            else {
+                subscriber.complete();
+            }
+        };
+        subscribeNext();
+    });
 }
 exports.onErrorResumeNext = onErrorResumeNext;
 //# sourceMappingURL=onErrorResumeNext.js.map
@@ -10649,6 +10709,7 @@ exports.buffer = void 0;
 var lift_1 = __nccwpck_require__(8669);
 var noop_1 = __nccwpck_require__(1642);
 var OperatorSubscriber_1 = __nccwpck_require__(9549);
+var innerFrom_1 = __nccwpck_require__(7105);
 function buffer(closingNotifier) {
     return lift_1.operate(function (source, subscriber) {
         var currentBuffer = [];
@@ -10656,7 +10717,7 @@ function buffer(closingNotifier) {
             subscriber.next(currentBuffer);
             subscriber.complete();
         }));
-        closingNotifier.subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () {
+        innerFrom_1.innerFrom(closingNotifier).subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () {
             var b = currentBuffer;
             currentBuffer = [];
             subscriber.next(b);
@@ -11463,13 +11524,14 @@ var take_1 = __nccwpck_require__(3698);
 var ignoreElements_1 = __nccwpck_require__(1062);
 var mapTo_1 = __nccwpck_require__(2300);
 var mergeMap_1 = __nccwpck_require__(9914);
+var innerFrom_1 = __nccwpck_require__(7105);
 function delayWhen(delayDurationSelector, subscriptionDelay) {
     if (subscriptionDelay) {
         return function (source) {
             return concat_1.concat(subscriptionDelay.pipe(take_1.take(1), ignoreElements_1.ignoreElements()), source.pipe(delayWhen(delayDurationSelector)));
         };
     }
-    return mergeMap_1.mergeMap(function (value, index) { return delayDurationSelector(value, index).pipe(take_1.take(1), mapTo_1.mapTo(value)); });
+    return mergeMap_1.mergeMap(function (value, index) { return innerFrom_1.innerFrom(delayDurationSelector(value, index)).pipe(take_1.take(1), mapTo_1.mapTo(value)); });
 }
 exports.delayWhen = delayWhen;
 //# sourceMappingURL=delayWhen.js.map
@@ -11506,6 +11568,7 @@ exports.distinct = void 0;
 var lift_1 = __nccwpck_require__(8669);
 var OperatorSubscriber_1 = __nccwpck_require__(9549);
 var noop_1 = __nccwpck_require__(1642);
+var innerFrom_1 = __nccwpck_require__(7105);
 function distinct(keySelector, flushes) {
     return lift_1.operate(function (source, subscriber) {
         var distinctKeys = new Set();
@@ -11516,7 +11579,7 @@ function distinct(keySelector, flushes) {
                 subscriber.next(value);
             }
         }));
-        flushes === null || flushes === void 0 ? void 0 : flushes.subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () { return distinctKeys.clear(); }, noop_1.noop));
+        flushes && innerFrom_1.innerFrom(flushes).subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () { return distinctKeys.clear(); }, noop_1.noop));
     });
 }
 exports.distinct = distinct;
@@ -12455,7 +12518,7 @@ exports.observeOn = observeOn;
 
 /***/ }),
 
-/***/ 8991:
+/***/ 3569:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -12482,45 +12545,20 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
     return to;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.onErrorResumeNext = void 0;
-var lift_1 = __nccwpck_require__(8669);
-var innerFrom_1 = __nccwpck_require__(7105);
+exports.onErrorResumeNext = exports.onErrorResumeNextWith = void 0;
 var argsOrArgArray_1 = __nccwpck_require__(8824);
-var OperatorSubscriber_1 = __nccwpck_require__(9549);
-var noop_1 = __nccwpck_require__(1642);
-function onErrorResumeNext() {
+var onErrorResumeNext_1 = __nccwpck_require__(6089);
+function onErrorResumeNextWith() {
     var sources = [];
     for (var _i = 0; _i < arguments.length; _i++) {
         sources[_i] = arguments[_i];
     }
     var nextSources = argsOrArgArray_1.argsOrArgArray(sources);
-    return lift_1.operate(function (source, subscriber) {
-        var remaining = __spreadArray([source], __read(nextSources));
-        var subscribeNext = function () {
-            if (!subscriber.closed) {
-                if (remaining.length > 0) {
-                    var nextSource = void 0;
-                    try {
-                        nextSource = innerFrom_1.innerFrom(remaining.shift());
-                    }
-                    catch (err) {
-                        subscribeNext();
-                        return;
-                    }
-                    var innerSub = OperatorSubscriber_1.createOperatorSubscriber(subscriber, undefined, noop_1.noop, noop_1.noop);
-                    nextSource.subscribe(innerSub);
-                    innerSub.add(subscribeNext);
-                }
-                else {
-                    subscriber.complete();
-                }
-            }
-        };
-        subscribeNext();
-    });
+    return function (source) { return onErrorResumeNext_1.onErrorResumeNext.apply(void 0, __spreadArray([source], __read(nextSources))); };
 }
-exports.onErrorResumeNext = onErrorResumeNext;
-//# sourceMappingURL=onErrorResumeNext.js.map
+exports.onErrorResumeNextWith = onErrorResumeNextWith;
+exports.onErrorResumeNext = onErrorResumeNextWith;
+//# sourceMappingURL=onErrorResumeNextWith.js.map
 
 /***/ }),
 
@@ -12906,6 +12944,7 @@ exports.repeat = repeat;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.repeatWhen = void 0;
+var innerFrom_1 = __nccwpck_require__(7105);
 var Subject_1 = __nccwpck_require__(9944);
 var lift_1 = __nccwpck_require__(8669);
 var OperatorSubscriber_1 = __nccwpck_require__(9549);
@@ -12920,7 +12959,7 @@ function repeatWhen(notifier) {
         var getCompletionSubject = function () {
             if (!completions$) {
                 completions$ = new Subject_1.Subject();
-                notifier(completions$).subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () {
+                innerFrom_1.innerFrom(notifier(completions$)).subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () {
                     if (innerSub) {
                         subscribeForRepeatWhen();
                     }
@@ -13042,6 +13081,7 @@ exports.retry = retry;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.retryWhen = void 0;
+var innerFrom_1 = __nccwpck_require__(7105);
 var Subject_1 = __nccwpck_require__(9944);
 var lift_1 = __nccwpck_require__(8669);
 var OperatorSubscriber_1 = __nccwpck_require__(9549);
@@ -13054,7 +13094,7 @@ function retryWhen(notifier) {
             innerSub = source.subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, undefined, undefined, function (err) {
                 if (!errors$) {
                     errors$ = new Subject_1.Subject();
-                    notifier(errors$).subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () {
+                    innerFrom_1.innerFrom(notifier(errors$)).subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () {
                         return innerSub ? subscribeForRetryWhen() : (syncResub = true);
                     }));
                 }
@@ -13084,6 +13124,7 @@ exports.retryWhen = retryWhen;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sample = void 0;
+var innerFrom_1 = __nccwpck_require__(7105);
 var lift_1 = __nccwpck_require__(8669);
 var noop_1 = __nccwpck_require__(1642);
 var OperatorSubscriber_1 = __nccwpck_require__(9549);
@@ -13095,7 +13136,7 @@ function sample(notifier) {
             hasValue = true;
             lastValue = value;
         }));
-        notifier.subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () {
+        innerFrom_1.innerFrom(notifier).subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () {
             if (hasValue) {
                 hasValue = false;
                 var value = lastValue;
@@ -13188,6 +13229,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sequenceEqual = void 0;
 var lift_1 = __nccwpck_require__(8669);
 var OperatorSubscriber_1 = __nccwpck_require__(9549);
+var innerFrom_1 = __nccwpck_require__(7105);
 function sequenceEqual(compareTo, comparator) {
     if (comparator === void 0) { comparator = function (a, b) { return a === b; }; }
     return lift_1.operate(function (source, subscriber) {
@@ -13215,7 +13257,7 @@ function sequenceEqual(compareTo, comparator) {
             return sequenceEqualSubscriber;
         };
         source.subscribe(createSubscriber(aState, bState));
-        compareTo.subscribe(createSubscriber(bState, aState));
+        innerFrom_1.innerFrom(compareTo).subscribe(createSubscriber(bState, aState));
     });
 }
 exports.sequenceEqual = sequenceEqual;
@@ -13339,7 +13381,7 @@ function handleReset(reset, on) {
             reset();
         },
     });
-    return on.apply(void 0, __spreadArray([], __read(args))).subscribe(onSubscriber);
+    return innerFrom_1.innerFrom(on.apply(void 0, __spreadArray([], __read(args)))).subscribe(onSubscriber);
 }
 //# sourceMappingURL=share.js.map
 
@@ -13846,18 +13888,13 @@ exports.tap = tap;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.throttle = exports.defaultThrottleConfig = void 0;
+exports.throttle = void 0;
 var lift_1 = __nccwpck_require__(8669);
 var OperatorSubscriber_1 = __nccwpck_require__(9549);
 var innerFrom_1 = __nccwpck_require__(7105);
-exports.defaultThrottleConfig = {
-    leading: true,
-    trailing: false,
-};
 function throttle(durationSelector, config) {
-    if (config === void 0) { config = exports.defaultThrottleConfig; }
     return lift_1.operate(function (source, subscriber) {
-        var leading = config.leading, trailing = config.trailing;
+        var _a = config !== null && config !== void 0 ? config : {}, _b = _a.leading, leading = _b === void 0 ? true : _b, _c = _a.trailing, trailing = _c === void 0 ? false : _c;
         var hasValue = false;
         var sendValue = null;
         var throttled = null;
@@ -13913,7 +13950,6 @@ var throttle_1 = __nccwpck_require__(6713);
 var timer_1 = __nccwpck_require__(9757);
 function throttleTime(duration, scheduler, config) {
     if (scheduler === void 0) { scheduler = async_1.asyncScheduler; }
-    if (config === void 0) { config = throttle_1.defaultThrottleConfig; }
     var duration$ = timer_1.timer(duration, scheduler);
     return throttle_1.throttle(function () { return duration$; }, config);
 }
@@ -14146,6 +14182,7 @@ var Subject_1 = __nccwpck_require__(9944);
 var lift_1 = __nccwpck_require__(8669);
 var OperatorSubscriber_1 = __nccwpck_require__(9549);
 var noop_1 = __nccwpck_require__(1642);
+var innerFrom_1 = __nccwpck_require__(7105);
 function window(windowBoundaries) {
     return lift_1.operate(function (source, subscriber) {
         var windowSubject = new Subject_1.Subject();
@@ -14158,7 +14195,7 @@ function window(windowBoundaries) {
             windowSubject.complete();
             subscriber.complete();
         }, errorHandler));
-        windowBoundaries.subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () {
+        innerFrom_1.innerFrom(windowBoundaries).subscribe(OperatorSubscriber_1.createOperatorSubscriber(subscriber, function () {
             windowSubject.complete();
             subscriber.next((windowSubject = new Subject_1.Subject()));
         }, noop_1.noop, errorHandler));
@@ -14923,11 +14960,13 @@ var AnimationFrameAction = (function (_super) {
         return scheduler._scheduled || (scheduler._scheduled = animationFrameProvider_1.animationFrameProvider.requestAnimationFrame(function () { return scheduler.flush(undefined); }));
     };
     AnimationFrameAction.prototype.recycleAsyncId = function (scheduler, id, delay) {
+        var _a;
         if (delay === void 0) { delay = 0; }
-        if ((delay != null && delay > 0) || (delay == null && this.delay > 0)) {
+        if (delay != null ? delay > 0 : this.delay > 0) {
             return _super.prototype.recycleAsyncId.call(this, scheduler, id, delay);
         }
-        if (!scheduler.actions.some(function (action) { return action.id === id; })) {
+        var actions = scheduler.actions;
+        if (id != null && ((_a = actions[actions.length - 1]) === null || _a === void 0 ? void 0 : _a.id) !== id) {
             animationFrameProvider_1.animationFrameProvider.cancelAnimationFrame(id);
             scheduler._scheduled = undefined;
         }
@@ -15036,13 +15075,17 @@ var AsapAction = (function (_super) {
         return scheduler._scheduled || (scheduler._scheduled = immediateProvider_1.immediateProvider.setImmediate(scheduler.flush.bind(scheduler, undefined)));
     };
     AsapAction.prototype.recycleAsyncId = function (scheduler, id, delay) {
+        var _a;
         if (delay === void 0) { delay = 0; }
-        if ((delay != null && delay > 0) || (delay == null && this.delay > 0)) {
+        if (delay != null ? delay > 0 : this.delay > 0) {
             return _super.prototype.recycleAsyncId.call(this, scheduler, id, delay);
         }
-        if (!scheduler.actions.some(function (action) { return action.id === id; })) {
+        var actions = scheduler.actions;
+        if (id != null && ((_a = actions[actions.length - 1]) === null || _a === void 0 ? void 0 : _a.id) !== id) {
             immediateProvider_1.immediateProvider.clearImmediate(id);
-            scheduler._scheduled = undefined;
+            if (scheduler._scheduled === id) {
+                scheduler._scheduled = undefined;
+            }
         }
         return undefined;
     };
@@ -15143,6 +15186,7 @@ var AsyncAction = (function (_super) {
         return _this;
     }
     AsyncAction.prototype.schedule = function (state, delay) {
+        var _a;
         if (delay === void 0) { delay = 0; }
         if (this.closed) {
             return this;
@@ -15155,7 +15199,7 @@ var AsyncAction = (function (_super) {
         }
         this.pending = true;
         this.delay = delay;
-        this.id = this.id || this.requestAsyncId(scheduler, this.id, delay);
+        this.id = (_a = this.id) !== null && _a !== void 0 ? _a : this.requestAsyncId(scheduler, this.id, delay);
         return this;
     };
     AsyncAction.prototype.requestAsyncId = function (scheduler, _id, delay) {
@@ -15167,7 +15211,9 @@ var AsyncAction = (function (_super) {
         if (delay != null && this.delay === delay && this.pending === false) {
             return id;
         }
-        intervalProvider_1.intervalProvider.clearInterval(id);
+        if (id != null) {
+            intervalProvider_1.intervalProvider.clearInterval(id);
+        }
         return undefined;
     };
     AsyncAction.prototype.execute = function (state, delay) {
@@ -15249,7 +15295,6 @@ var AsyncScheduler = (function (_super) {
         var _this = _super.call(this, SchedulerAction, now) || this;
         _this.actions = [];
         _this._active = false;
-        _this._scheduled = undefined;
         return _this;
     }
     AsyncScheduler.prototype.flush = function (action) {
@@ -15322,16 +15367,15 @@ var QueueAction = (function (_super) {
         return this;
     };
     QueueAction.prototype.execute = function (state, delay) {
-        return (delay > 0 || this.closed) ?
-            _super.prototype.execute.call(this, state, delay) :
-            this._execute(state, delay);
+        return delay > 0 || this.closed ? _super.prototype.execute.call(this, state, delay) : this._execute(state, delay);
     };
     QueueAction.prototype.requestAsyncId = function (scheduler, id, delay) {
         if (delay === void 0) { delay = 0; }
         if ((delay != null && delay > 0) || (delay == null && this.delay > 0)) {
             return _super.prototype.requestAsyncId.call(this, scheduler, id, delay);
         }
-        return scheduler.flush(this);
+        scheduler.flush(this);
+        return 0;
     };
     return QueueAction;
 }(AsyncAction_1.AsyncAction));
@@ -15466,7 +15510,7 @@ var VirtualAction = (function (_super) {
         var actions = scheduler.actions;
         actions.push(this);
         actions.sort(VirtualAction.sortActions);
-        return true;
+        return 1;
     };
     VirtualAction.prototype.recycleAsyncId = function (scheduler, id, delay) {
         if (delay === void 0) { delay = 0; }
@@ -16752,8 +16796,8 @@ var multicast_1 = __nccwpck_require__(5457);
 Object.defineProperty(exports, "multicast", ({ enumerable: true, get: function () { return multicast_1.multicast; } }));
 var observeOn_1 = __nccwpck_require__(2451);
 Object.defineProperty(exports, "observeOn", ({ enumerable: true, get: function () { return observeOn_1.observeOn; } }));
-var onErrorResumeNext_1 = __nccwpck_require__(8991);
-Object.defineProperty(exports, "onErrorResumeNext", ({ enumerable: true, get: function () { return onErrorResumeNext_1.onErrorResumeNext; } }));
+var onErrorResumeNextWith_1 = __nccwpck_require__(3569);
+Object.defineProperty(exports, "onErrorResumeNext", ({ enumerable: true, get: function () { return onErrorResumeNextWith_1.onErrorResumeNext; } }));
 var pairwise_1 = __nccwpck_require__(2206);
 Object.defineProperty(exports, "pairwise", ({ enumerable: true, get: function () { return pairwise_1.pairwise; } }));
 var partition_1 = __nccwpck_require__(5949);
@@ -23519,18 +23563,20 @@ const getLikes = (clientId, userId) => {
         playlist: await addTracksToPlaylist(clientId, like.playlist)
     })));
 };
-const getUserId = async (username) => {
-    const response = await (0, node_fetch_1.default)(`https://soundcloud.com/${username}`);
-    const text = await response.text();
-    const match = text.match(/soundcloud:\/\/users:\d+/);
-    if (match === null) {
+const getUserId = async (clientId, username) => {
+    const url = new URL("https://api-v2.soundcloud.com/search/users");
+    url.searchParams.append('q', username);
+    const json = await loadJson(addClientId(url.href, clientId));
+    (0, validate_1.validateUsersearch)(json);
+    const userEntry = json.collection.find(entry => entry.permalink === username);
+    if (userEntry === undefined) {
         throw new Error(`could not resolve user id for user name "${username}"`);
     }
-    return match[0].slice(19);
+    return userEntry.id;
 };
 exports["default"] = async (username, outputPath) => {
     const clientId = await (0, getClientId_1.default)();
-    const userId = await getUserId(username);
+    const userId = await getUserId(clientId, username);
     const likes = await (0, rxjs_1.firstValueFrom)(getLikes(clientId, userId).pipe((0, operators_1.toArray)()));
     await fs_1.promises.writeFile(outputPath, JSON.stringify(likes, null, 2));
 };
@@ -23550,6 +23596,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const node_fetch_1 = __importDefault(__nccwpck_require__(4429));
 const SCRIPT_REGEX = /<script crossorigin src="(.+?)">/g;
 const CLIENT_ID_REGEX = /client_id:"(.+?)"/g;
+// Soundcloud seems to block the access to soundcloud.com from github runner ip addresses, but the access to the scripts themselves is still possible.
+// Use these script urls as fallback if they could not be scrapped from soundcloud.com.
+const FALLBACK_SCRIPT_SRCS = [
+    "https://a-v2.sndcdn.com/assets/0-18778ebb.js",
+    "https://a-v2.sndcdn.com/assets/3-d97f3637.js",
+    "https://a-v2.sndcdn.com/assets/50-d480c257.js"
+];
 const getClientIdFromScriptSrc = async (scriptSrc) => {
     const script = await (0, node_fetch_1.default)(scriptSrc).then(r => r.text());
     const clientIdMatch = script.matchAll(CLIENT_ID_REGEX).next();
@@ -23558,10 +23611,23 @@ const getClientIdFromScriptSrc = async (scriptSrc) => {
     }
     return clientIdMatch.value[1];
 };
-exports["default"] = async () => {
-    const site = await (0, node_fetch_1.default)("https://soundcloud.com/").then(r => r.text());
+const getScriptSrcs = async () => {
+    const response = await (0, node_fetch_1.default)("https://soundcloud.com/");
+    if (!response.ok) {
+        return FALLBACK_SCRIPT_SRCS;
+    }
+    const site = await response.text();
     const scriptSrcs = Array.from(site.matchAll(SCRIPT_REGEX)).map(matches => matches[1]);
-    return Promise.any(scriptSrcs.map(src => getClientIdFromScriptSrc(src)));
+    return scriptSrcs.length === 0 ? FALLBACK_SCRIPT_SRCS : scriptSrcs;
+};
+exports["default"] = async () => {
+    const scriptSrcs = await getScriptSrcs();
+    try {
+        return await Promise.any(scriptSrcs.map(src => getClientIdFromScriptSrc(src)));
+    }
+    catch {
+        throw new Error(`Could not find clientID within scripts ${JSON.stringify(scriptSrcs)}`);
+    }
 };
 
 
@@ -23584,8 +23650,8 @@ const main = async () => {
     await (0, createLikesLog_1.default)(username, outputPath);
 };
 main().catch((e) => {
-    console.error(e);
-    process.exit(1);
+    (0, core_1.error)(e);
+    (0, core_1.setFailed)(e.message);
 });
 
 
@@ -23600,7 +23666,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.validateLikes = exports.validatePlaylist = exports.validateTracks = void 0;
+exports.validateUsersearch = exports.validateLikes = exports.validatePlaylist = exports.validateTracks = void 0;
 const ajv_1 = __importDefault(__nccwpck_require__(2426));
 const user_schema_json_1 = __importDefault(__nccwpck_require__(3798));
 const track_schema_json_1 = __importDefault(__nccwpck_require__(3031));
@@ -23608,6 +23674,7 @@ const tracks_schema_json_1 = __importDefault(__nccwpck_require__(6873));
 const basePlaylist_schema_json_1 = __importDefault(__nccwpck_require__(4706));
 const playlist_schema_json_1 = __importDefault(__nccwpck_require__(7737));
 const likes_schema_json_1 = __importDefault(__nccwpck_require__(5487));
+const usersearch_schema_json_1 = __importDefault(__nccwpck_require__(3524));
 let ajv = undefined;
 class ValidationError extends Error {
     constructor(ajvErrors) {
@@ -23617,7 +23684,7 @@ class ValidationError extends Error {
 }
 const getAjv = () => {
     ajv = ajv ?? new ajv_1.default({
-        schemas: [user_schema_json_1.default, track_schema_json_1.default, tracks_schema_json_1.default, basePlaylist_schema_json_1.default, playlist_schema_json_1.default, likes_schema_json_1.default]
+        schemas: [user_schema_json_1.default, track_schema_json_1.default, tracks_schema_json_1.default, basePlaylist_schema_json_1.default, playlist_schema_json_1.default, likes_schema_json_1.default, usersearch_schema_json_1.default]
     });
     return ajv;
 };
@@ -23645,6 +23712,10 @@ function validateLikes(data) {
     validate(data, likes_schema_json_1.default.$id);
 }
 exports.validateLikes = validateLikes;
+function validateUsersearch(data) {
+    validate(data, usersearch_schema_json_1.default.$id);
+}
+exports.validateUsersearch = validateUsersearch;
 
 
 /***/ }),
@@ -25378,6 +25449,25 @@ class Response extends Body {
 		return response;
 	}
 
+	static json(data = undefined, init = {}) {
+		const body = JSON.stringify(data);
+
+		if (body === undefined) {
+			throw new TypeError('data is not JSON serializable');
+		}
+
+		const headers = new Headers(init && init.headers);
+
+		if (!headers.has('content-type')) {
+			headers.set('content-type', 'application/json');
+		}
+
+		return new Response(body, {
+			...init,
+			headers
+		});
+	}
+
 	get [Symbol.toStringTag]() {
 		return 'Response';
 	}
@@ -26557,7 +26647,15 @@ module.exports = JSON.parse('{"$schema":"http://json-schema.org/draft-07/schema#
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"$schema":"http://json-schema.org/draft-07/schema#","$id":"user.schema.json","type":"object","properties":{"id":{"type":"number"},"kind":{"const":"user"},"permalink_url":{"type":"string"},"username":{"type":"string"}},"required":["id","kind","permalink_url","username"]}');
+module.exports = JSON.parse('{"$schema":"http://json-schema.org/draft-07/schema#","$id":"user.schema.json","type":"object","properties":{"id":{"type":"number"},"kind":{"const":"user"},"permalink":{"type":"string"},"permalink_url":{"type":"string"},"username":{"type":"string"}},"required":["id","kind","permalink","permalink_url","username"]}');
+
+/***/ }),
+
+/***/ 3524:
+/***/ ((module) => {
+
+"use strict";
+module.exports = JSON.parse('{"$schema":"http://json-schema.org/draft-07/schema#","$id":"usersearch.schema.json","type":"object","properties":{"collection":{"type":"array","items":{"$ref":"user.schema.json"}}},"required":["collection"]}');
 
 /***/ })
 

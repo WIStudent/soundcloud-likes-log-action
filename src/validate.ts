@@ -8,6 +8,8 @@ import playlistSchema from './schemas/playlist.schema.json';
 import { PlaylistSchemaJson } from './schemas/types/playlist.schema';
 import likesSchema from './schemas/likes.schema.json';
 import { LikesSchemaJson } from './schemas/types/likes.schema';
+import usersearchSchema from './schemas/usersearch.schema.json';
+import { UsersearchSchemaJson } from './schemas/types/usersearch.schema';
 
 let ajv: Ajv|undefined = undefined;
 
@@ -20,7 +22,7 @@ class ValidationError extends Error {
 
 const getAjv = (): Ajv => {
   ajv = ajv ?? new Ajv({
-    schemas: [userSchema, trackSchema, tracksSchema, basePlaylistSchema, playlistSchema, likesSchema]
+    schemas: [userSchema, trackSchema, tracksSchema, basePlaylistSchema, playlistSchema, likesSchema, usersearchSchema]
   });
   return ajv;
 };
@@ -49,4 +51,8 @@ export function validatePlaylist(data: unknown): asserts data is PlaylistSchemaJ
 
 export function validateLikes(data: unknown): asserts data is LikesSchemaJson {
   validate(data, likesSchema.$id);
+}
+
+export function validateUsersearch(data: unknown): asserts data is UsersearchSchemaJson {
+  validate(data, usersearchSchema.$id);
 }

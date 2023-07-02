@@ -3,7 +3,7 @@ import {expand, concatMap, map, toArray} from 'rxjs/operators'
 import fetch from 'node-fetch';
 import {LikesSchemaJson} from './schemas/types/likes.schema';
 import {promises as fsp} from 'fs';
-import { validateLikes, validatePlaylist, validateTracks } from './validate';
+import { validateLikes, validatePlaylist, validateTracks, validateUsersearch } from './validate';
 import { PlaylistSchemaJson } from './schemas/types/playlist.schema';
 import { TracksSchemaJson } from './schemas/types/tracks.schema';
 import getClientId from './getClientId';
@@ -131,7 +131,7 @@ const addTracksToPlaylist = async (clientId: string, playlist: NarrowedPlaylist|
   }
 }
 
-const getLikes = (clientId: string, userId: string) => {
+const getLikes = (clientId: string, userId: number) => {
   const url = new URL(`https://api-v2.soundcloud.com/users/${userId}/likes`);
   url.searchParams.append('limit', '100');
   url.searchParams.append('client_id', clientId);
@@ -148,20 +148,22 @@ const getLikes = (clientId: string, userId: string) => {
   );
 };
 
-const getUserId = async (username: string): Promise<string> => {
-  const response = await fetch(`https://soundcloud.com/${username}`);
-  const text = await response.text();
-  const match = text.match(/soundcloud:\/\/users:\d+/);
-  if (match === null) {
+const getUserId = async (clientId: string, username: string): Promise<number> => {
+  const url = new URL("https://api-v2.soundcloud.com/search/users");
+  url.searchParams.append('q', username);
+  const json = await loadJson(addClientId(url.href, clientId));
+  validateUsersearch(json);
+  const userEntry = json.collection.find(entry => entry.permalink === username);
+  if (userEntry === undefined) {
     throw new Error(`could not resolve user id for user name "${username}"`);
   }
-  return match[0].slice(19);
+  return userEntry.id
 }
 
 
 export default async (username: string, outputPath: string) => {
   const clientId = await getClientId();
-  const userId = await getUserId(username);
+  const userId = await getUserId(clientId, username);
 
   const likes = await firstValueFrom(getLikes(clientId, userId).pipe(toArray()));
   await fsp.writeFile(outputPath, JSON.stringify(likes, null, 2));

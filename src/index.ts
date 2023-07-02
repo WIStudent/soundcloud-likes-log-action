@@ -1,4 +1,4 @@
-import { getInput } from '@actions/core';
+import { getInput, error, setFailed } from '@actions/core';
 import createLikesLog from './createLikesLog';
 
 const main = async () => {
@@ -8,6 +8,6 @@ const main = async () => {
 };
 
 main().catch((e) => {
-  console.error(e);
-  process.exit(1);
+  error(e);
+  setFailed(e.message);
 });

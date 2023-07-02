@@ -9,6 +9,9 @@
     "kind": {
       "const": "user"
     },
+    "permalink": {
+      "type": "string"
+    },
     "permalink_url": {
       "type": "string"
     },
@@ -16,5 +19,5 @@
       "type": "string"
     }
   },
-  "required": ["id", "kind", "permalink_url", "username"]
+  "required": ["id", "kind", "permalink", "permalink_url", "username"]
 }

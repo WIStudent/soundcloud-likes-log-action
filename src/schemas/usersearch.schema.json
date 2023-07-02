@@ -1,0 +1,14 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "usersearch.schema.json",
+  "type": "object",
+  "properties": {
+    "collection": {
+      "type": "array",
+      "items": {
+        "$ref": "user.schema.json"
+      }
+    }
+  },
+  "required": ["collection"]
+}
