@@ -1,5 +1,3 @@
-import fetch from 'node-fetch';
-
 const SCRIPT_REGEX = /<script crossorigin src="(.+?)">/g;
 const CLIENT_ID_REGEX = /client_id:"(.+?)"/g;
 

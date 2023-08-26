@@ -1,6 +1,5 @@
 import {of, EMPTY, from, firstValueFrom} from 'rxjs';
 import {expand, concatMap, map, toArray} from 'rxjs/operators'
-import fetch from 'node-fetch';
 import {LikesSchemaJson} from './schemas/types/likes.schema';
 import {promises as fsp} from 'fs';
 import { validateLikes, validatePlaylist, validateTracks, validateUsersearch } from './validate';
