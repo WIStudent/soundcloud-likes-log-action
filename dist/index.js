@@ -558,7 +558,7 @@ class OidcClient {
                 .catch(error => {
                 throw new Error(`Failed to get ID Token. \n 
         Error Code : ${error.statusCode}\n 
-        Error Message: ${error.result.message}`);
+        Error Message: ${error.message}`);
             });
             const id_token = (_a = res.result) === null || _a === void 0 ? void 0 : _a.value;
             if (!id_token) {
@@ -19467,7 +19467,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.validateUsersearch = exports.validateLikes = exports.validatePlaylist = exports.validateTracks = void 0;
+exports.validateTracks = validateTracks;
+exports.validatePlaylist = validatePlaylist;
+exports.validateLikes = validateLikes;
+exports.validateUsersearch = validateUsersearch;
 const ajv_1 = __importDefault(__nccwpck_require__(2426));
 const user_schema_json_1 = __importDefault(__nccwpck_require__(3798));
 const track_schema_json_1 = __importDefault(__nccwpck_require__(3031));
@@ -19504,19 +19507,15 @@ function validate(data, schemaId) {
 function validateTracks(data) {
     validate(data, tracks_schema_json_1.default.$id);
 }
-exports.validateTracks = validateTracks;
 function validatePlaylist(data) {
     validate(data, playlist_schema_json_1.default.$id);
 }
-exports.validatePlaylist = validatePlaylist;
 function validateLikes(data) {
     validate(data, likes_schema_json_1.default.$id);
 }
-exports.validateLikes = validateLikes;
 function validateUsersearch(data) {
     validate(data, usersearch_schema_json_1.default.$id);
 }
-exports.validateUsersearch = validateUsersearch;
 
 
 /***/ }),
