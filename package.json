@@ -1,6 +1,6 @@
 {
   "name": "@wistudent/soundcloud-likes-log-action",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Github action to log list of soundcloud likes",
   "main": "dist/index.js",
   "scripts": {
