@@ -26,11 +26,11 @@ jobs:
   update-log:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: WIStudent/soundcloud-likes-log-action@v1
+      - uses: actions/checkout@v4
+      - uses: WIStudent/soundcloud-likes-log-action@v2
         with:
           username: wistudent
-      - uses: EndBug/add-and-commit@v7
+      - uses: EndBug/add-and-commit@v9
         with:
           add: likes.json
 ```
