@@ -12,7 +12,7 @@
   "devDependencies": {
     "@types/node": "^20.16.0",
     "@vercel/ncc": "^0.38.1",
-    "json-schema-to-typescript": "^15.0.0",
+    "json-schema-to-typescript": "^15.0.2",
     "typescript": "^5.5.4"
   },
   "dependencies": {
