@@ -10,7 +10,7 @@
   "author": "Tobias Trumm <info@tobiastrumm.de> (https://tobiastrumm.de)",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^20.16.0",
+    "@types/node": "^20.16.11",
     "@vercel/ncc": "^0.38.1",
     "json-schema-to-typescript": "^15.0.0",
     "typescript": "^5.5.4"
